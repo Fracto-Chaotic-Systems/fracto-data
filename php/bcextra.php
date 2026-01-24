@@ -119,7 +119,8 @@ function bcRound_not( $value, $places )
 function bcneg( $value )
 {
   // Already negative?
-  if ( '-' == $value[ 0 ] )
+  $first_char = substr($value, 0, 1);
+  if ( '-' == $first_char )
     $value = substr( $value, 1 );
   else
     $value = "-$value";

@@ -6,22 +6,22 @@ $theta_num = $argv[1];
 $theta_den = $argv[2];
 $r_num = $argv[3];
 $r_den = $argv[4];
+
 $precision = $argv[5];
+$high_precision = round( 1.618 * $precision);
+
+bcscale($precision);
+echo("\n");
 
 echo ("theta_num=$theta_num\n");
 echo ("theta_den=$theta_den\n");
+$theta = bcdiv($theta_num, $theta_den);
+echo ("theta=$theta\n\n");
+
 echo ("r_num=$r_num\n");
 echo ("r_den=$r_den\n");
-echo ("precision=$precision\n");
-echo ("\n");
-
-bcscale($precision);
-
-$theta = bcdiv($theta_num, $theta_den);
-echo ("theta=$theta\n");
-
 $r = bcdiv($r_num, $r_den);
-echo ("r=$r\n");
+echo ("r=$r\n\n");
 
 function P_from_r_theta($r, $theta){
     $r_squared = bcmul($r, $r);
@@ -83,10 +83,10 @@ function calculate_focal_Q ($re, $im){
    }
 
 $P = P_from_r_theta($r, $theta);
-var_dump($P);
+// var_dump($P);
 
 $focal_Q = calculate_focal_Q($P['re'], $P['im']);
-var_dump($focal_Q);
+// var_dump($focal_Q);
 
 $FIB_SCALAR = 10000;
 $MAX_ORBITAL = 25000;
@@ -96,22 +96,32 @@ $Q = [
     "im" => 0
 ];
 $iterations = 0;
+$cardinality = 0;
+$magnitude = new BcMath\Number("0");
 
 function iterate_Q ($count){
     global $iterations;
     global $Q;
+    global $P;
+    global $precision;
+    global $high_precision;
     for($i = 0; $i < $count; $i++) {
-
-//       const re_left_part = this.re.mul(this.re);
-//       const re_right_part = this.im.mul(this.im);
-//       const re_part = re_left_part.sub(re_right_part);
-//       const im_left_part = this.re.mul(this.im);
-//       const im_right_part = this.im.mul(this.re);
-//       const im_part = im_left_part.add(im_right_part);
-//       this.re = re_part.add(z.re)
-//       this.im = im_part.add(z.im)
+        $re_squared = bcmul($Q['re'], $Q['re'], $high_precision);
+        $im_squared = bcmul($Q['im'], $Q['im'], $high_precision);
+        $re_part = bcsub($re_squared, $im_squared, $high_precision);
+        $re_times_im = bcmul($Q['re'], $Q['im'], $high_precision);
+        $im_part = bcmul("2", $re_times_im, $high_precision);
+        $re_final = bcadd($re_part, $P["re"], $high_precision);
+        $im_final = bcadd($im_part, $P["im"], $high_precision);
+        $Q = [
+            "re" => bcround ($re_final, $precision),
+            "im" => bcround ($im_final, $precision)
+        ];
+        $iterations += 1;
     }
-    echo("$iterations\n");
+    if ($count > 1) {
+        echo("$iterations\n");
+    }
 }
 
 function stringify($complex) {
@@ -121,31 +131,72 @@ function stringify($complex) {
 }
 
 function test_convergence(){
+    global $MAX_ORBITAL;
     global $iterations;
     global $Q;
-    $string_Q = stringify($Q);
-    $all_Qs = [
-        $string_Q => $iterations
-    ];
+    global $cardinality;
+    $all_Qs = [];
     for ($i = 0; $i < $MAX_ORBITAL; $i++){
         iterate_Q(1);
         $string_Q = stringify($Q);
-        if ($all_Qs[$string_Q]) {
-            return $iterations - $all_Qs[$string_Q];
+        if (array_key_exists($string_Q, $all_Qs)) {
+            $cardinality = $iterations - $all_Qs[$string_Q];
+            return $cardinality;
         }
         $all_Qs[$string_Q] = $iterations;
     }
+    return 0;
+}
 
-    var_dump($all_Qs);
-    return true;
+function measure_orbital(){
+    global $focal_Q;
+    global $Q;
+    global $magnitude;
+    global $cardinality;
+    global $precision;
+    for ($i = 0; $i < $cardinality; $i++) {
+        $re_diff = bcsub($focal_Q["re"], $Q["re"]);
+        $im_diff = bcsub($focal_Q["im"], $Q["im"]);
+        $re_squared = bcmul($re_diff, $re_diff, $precision * 2);
+        $im_squared = bcmul($im_diff, $im_diff, $precision * 2);
+        $sum_squares = bcadd($re_squared, $im_squared, $precision * 2);
+        $test_magnitude = bcsqrt($sum_squares, $precision * 2);
+        $magnitude_number = new BcMath\Number($test_magnitude);
+        $is_bigger = $magnitude_number->compare($magnitude);
+        if ($is_bigger > 0) {
+            $magnitude = $magnitude_number;
+        }
+        iterate_Q(1);
+    }
+    return $magnitude;
+}
+
+function scientific_notation($value) {
+    if( preg_match("/^0\.0*/",$value,$m)) {
+        $zeroes = strlen($m[0]);
+        $value = substr($value,$zeroes,1)
+                    .rtrim(".".substr($value,$zeroes+1),"0.")
+                    ."E-".($zeroes-1);
+    }
+    elseif( preg_match("/(\d+)(?:\.(\d+))?/",$value,$m)) {
+        $zeroes = strlen($m[1]);
+        if (array_key_exists(2, $m)) {
+            $value = substr($value,0,1)
+                        .rtrim(".".substr($m[1],1).$m[2],"0.")
+                        ."E+".($zeroes-1);
+        }
+    }
+    return $value;
 }
 
 $prev_fib = 1;
 $curr_fib = 1;
 $convergence = 0;
+$start_time = microtime(true);
 while (true) {
     $convergence = test_convergence ();
     if ($convergence) {
+        echo("found pattern with $convergence points, $iterations iterations\n");
         break;
     }
     iterate_Q($curr_fib * $FIB_SCALAR);
@@ -153,4 +204,38 @@ while (true) {
     $curr_fib += $prev_fib;
     $prev_fib = $temp_fib;
 }
+$end_time = microtime(true);
+$total_time_s = round(($end_time - $start_time) * 100) / 100;
+if ($total_time_s) {
+    $iterations_per_s = round($iterations / $total_time_s);
+} else {
+    $iterations_per_s = "all of the ";
+}
 
+if ($cardinality > 1) {
+    $magnitude = measure_orbital();
+}
+
+echo("precision $precision\n");
+echo("cardinality $cardinality\n");
+$scientific_small = scientific_notation($magnitude);
+echo("magnitude: $scientific_small\n");
+echo("total time $total_time_s sec\n");
+echo("$iterations_per_s iterations / sec\n");
+
+$vectors_dir = __DIR__ . "/../vectors";
+$vector_filename = "radian-$theta_den.csv";
+
+$vector_filepath = "$vectors_dir/$vector_filename";
+if (!file_exists($vector_filepath)){
+    $header_row = "theta_num,theta_den,theta,r_num,r_den,r,P_re,P_im,focal_re,focal_im,seed_re,seed_im,precision,cardinality,iterations,magnitude\n";
+    file_put_contents($vector_filepath, $header_row);
+}
+$P_re = $P["re"];
+$P_im = $P["im"];
+$focal_re = $focal_Q["re"];
+$focal_im = $focal_Q["im"];
+$seed_re = $Q["re"];
+$seed_im = $Q["im"];
+$row_data = "$theta_num,$theta_den,$theta,$r_num,$r_den,$r,$P_re,$P_im,$focal_re,$focal_im,$seed_re,$seed_im,$precision,$cardinality,$iterations,$scientific_small\n";
+file_put_contents($vector_filepath, $row_data, FILE_APPEND | LOCK_EX);
