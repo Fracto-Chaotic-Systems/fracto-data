@@ -104,10 +104,15 @@ These database records are separate from the tile server's compiled in-memory in
 - `GET /circuitry?re=<re>&im=<im>` samples a smooth closed curve around the
   periodic orbit for the Mandelbrot parameter `c = re + im*i`. Optional
   `samples` controls the number of returned `{t, C:{re, im}}` values and
-  `looped_points=true` selects the alternate normal orientation. Orbital
-  discovery uses `FractoFastCalc`, allowing deep periodic orbits to require
-  millions of iterations. Without `samples`, 50 values are generated between
-  each pair of orbital points so integer `t` values are represented exactly.
+  `looped_points=true` selects the alternate normal orientation, and
+  `optimize_polarity=true` exhaustively tests per-point normal polarities for
+  small orbits, selecting the result with the least tangent-direction
+  variation. Curve normals use the ray from `Q = (1 - sqrt(1 - 4P)) / 2` to
+  each orbital point. The response includes `Q`, the center used for those
+  rays. Orbital discovery uses `FractoFastCalc`, allowing deep periodic orbits
+  to require millions of iterations. Without `samples`, 50 values are
+  generated between each pair of orbital points so integer `t` values are
+  represented exactly.
 
 ### Lore
 
