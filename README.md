@@ -101,6 +101,13 @@ These database records are separate from the tile server's compiled in-memory in
 
 - `GET /orbital` calculates one orbital from `re`, `im`, and `limit`.
 - `GET /orbitals` calculates or retrieves multiple orbital results using the same parameters.
+- `GET /circuitry?re=<re>&im=<im>` samples a smooth closed curve around the
+  periodic orbit for the Mandelbrot parameter `c = re + im*i`. Optional
+  `samples` controls the number of returned `{t, C:{re, im}}` values and
+  `looped_points=true` selects the alternate normal orientation. Orbital
+  discovery uses `FractoFastCalc`, allowing deep periodic orbits to require
+  millions of iterations. Without `samples`, 50 values are generated between
+  each pair of orbital points so integer `t` values are represented exactly.
 
 ### Lore
 

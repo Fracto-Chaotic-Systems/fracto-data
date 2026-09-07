@@ -27,6 +27,7 @@ import {
     handle_orbital,
     handle_orbitals
 } from "./handlers/handle_orbital.js";
+import {handle_circuitry} from "./handlers/circuitry.js";
 import {handle_tile_coverage} from "./handlers/handle_coverage.js";
 import {
     handle_tile,
@@ -84,6 +85,7 @@ app.get('/query', handle_query)
 app.get('/solve', handle_solve)
 app.get('/orbital', handle_orbital)
 app.get('/orbitals', handle_orbitals)
+app.get('/circuitry', handle_circuitry)
 
 app.get('/lore_categories', handle_lore_categories)
 app.get('/lore_content', handle_lore_content)
