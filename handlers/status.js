@@ -1,3 +1,3 @@
-export const handle_main_status =(req, res) => {
-   res.send('Hello World! Welcome to Fracto.');
-}
+export const handle_main_status = (req, res) => {
+  res.send("Hello World! Welcome to Fracto.");
+};
