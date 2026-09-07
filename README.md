@@ -105,14 +105,18 @@ These database records are separate from the tile server's compiled in-memory in
   periodic orbit for the Mandelbrot parameter `c = re + im*i`. Optional
   `samples` controls the number of returned `{t, C:{re, im}}` values and
   `looped_points=true` selects the alternate normal orientation, and
+  `interpolation=radial_sweep` selects the polar radial-sweep interpolator
+  instead of the default Hermite interpolator. In radial-sweep mode, `t` is
+  the unwrapped sweep angle around `Q`.
   `optimize_polarity=true` exhaustively tests per-point normal polarities for
-  small orbits, selecting the result with the least tangent-direction
-  variation. Curve normals use the ray from `Q = (1 - sqrt(1 - 4P)) / 2` to
-  each orbital point. The response includes `Q`, the center used for those
-  rays. Orbital discovery uses `FractoFastCalc`, allowing deep periodic orbits
-  to require millions of iterations. Without `samples`, 50 values are
-  generated between each pair of orbital points so integer `t` values are
-  represented exactly.
+  small orbits, selecting the result using normalized arc length, tangent
+  variation, tangent-reversal penalties, and directional angular sweep around
+  `Q`. Curve normals use the ray from
+  `Q = (1 - sqrt(1 - 4P)) / 2` to each orbital point. The response includes
+  `Q`, the center used for those rays, and the score components. Orbital
+  discovery uses `FractoFastCalc`, allowing deep periodic orbits to require
+  millions of iterations. Without `samples`, 50 values are generated between
+  each pair of orbital points so integer `t` values are represented exactly.
 
 ### Lore
 
