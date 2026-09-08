@@ -94,17 +94,19 @@ const get_normals = (points, focal_point) => {
  *
  * The endpoint accepts `GET /circuitry` query parameters:
  * - `re`, `im` (required): finite focal-point coordinates P.
- * - `samples` (optional): output count, clamped to 2 through 65,536. The
- *   default is 50 samples per orbital interval plus the closing sample.
+ * - `samples` (optional): Hermite output count, clamped to 2 through 65,536.
+ *   Radial-sweep output always uses 50 samples per orbital interval plus the
+ *   closing sample so every interval receives equal sampling density.
  * - `looped_points` (optional boolean): reverses Hermite normal orientation.
  * - `optimize_polarity` (optional boolean): exhaustively tests Hermite normal
  *   polarity patterns for small orbits and scores their smoothness.
  * - `interpolation` (optional): `hermite` (default) or `radial_sweep`.
  *
  * Both modes use FractoFastCalc to find the orbit and return `{t, C}` samples,
- * orbit cardinality, sample count, Q, and interpolation metadata. Hermite
- * mode also returns polarity optimization metadata. Radial-sweep mode uses
- * Q as its polar origin and intentionally ignores Hermite-only options.
+ * the exact normalized `orbital_points` used to construct the curve, orbit
+ * cardinality, sample count, Q, and interpolation metadata. Hermite mode also
+ * returns polarity optimization metadata. Radial-sweep mode uses Q as its
+ * polar origin and intentionally ignores Hermite-only options.
  *
  * Responses:
  * - `200`: sampled curve and metadata.
@@ -143,6 +145,7 @@ export const handle_circuitry = (req, res) => {
   if (orbit?.pattern === 0) {
     return res.status(200).json({
       result: [],
+      orbital_points: [],
       cardinality: 0,
       samples: 0,
       Q: null,
@@ -173,10 +176,24 @@ export const handle_circuitry = (req, res) => {
     Math.max(2, Number(req.query.samples) || default_sample_count),
   );
   if (interpolation === INTERPOLATION_RADIAL_SWEEP) {
+    const radial_samples_per_interval = Math.max(
+      1,
+      Math.min(
+        SAMPLES_PER_ORBITAL_INTERVAL,
+        Math.floor((MAX_SAMPLE_COUNT - 1) / points.length),
+      ),
+    );
+    const radial_sample_count =
+      points.length * radial_samples_per_interval + 1;
     return res.status(200).json({
-      result: sample_radial_sweep(points, cardioid_root, sample_count),
+      result: sample_radial_sweep(
+        points,
+        cardioid_root,
+        radial_samples_per_interval,
+      ),
+      orbital_points: points,
       cardinality: points.length,
-      samples: sample_count,
+      samples: radial_sample_count,
       Q: cardioid_root,
       interpolation,
       looped_points: false,
@@ -198,6 +215,7 @@ export const handle_circuitry = (req, res) => {
       };
   return res.status(200).json({
     result: sample_curve(optimized.coefficients, points.length, sample_count),
+    orbital_points: points,
     cardinality: points.length,
     samples: sample_count,
     Q: cardioid_root,
