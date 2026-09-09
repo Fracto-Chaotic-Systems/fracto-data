@@ -22,6 +22,8 @@ import { handle_hyper_complex_buffer } from "./handlers/hyper-complex.js";
 import { handle_tiles } from "./handlers/handle_tiles.js";
 import { handle_orbital, handle_orbitals } from "./handlers/handle_orbital.js";
 import { handle_circuitry } from "./handlers/handle_circuitry.js";
+import { handle_orbital_discovery } from "./handlers/handle_orbital_discovery.js";
+import { handle_orbital_spectrum } from "./handlers/handle_orbital_spectrum.js";
 import { handle_tile_coverage } from "./handlers/handle_coverage.js";
 import { handle_tile, handle_tile_get } from "./handlers/handle_tile.js";
 import {
@@ -87,6 +89,8 @@ app.get("/solve", handle_solve);
 app.get("/orbital", handle_orbital);
 app.get("/orbitals", handle_orbitals);
 app.get("/circuitry", handle_circuitry);
+app.get("/orbital_discovery", handle_orbital_discovery);
+app.get("/orbital_spectrum", handle_orbital_spectrum);
 
 app.get("/lore_categories", handle_lore_categories);
 app.get("/lore_content", handle_lore_content);
