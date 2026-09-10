@@ -60,3 +60,42 @@ diagnostics, but candidates beyond that ceiling are excluded. This five-cycle
 factor is deliberately explicit: detecting much larger cardinalities will
 eventually require longer runs, more samples, or a confidence model that can
 justify fewer observed cycles.
+
+## Peak rational decomposition
+
+Each ranked entry in `spectrum.peaks` contains a raw `bin` and a frequency
+estimate. The analyzer also approximates that frequency as a reduced rational
+value:
+
+```text
+frequency_cycles_per_iteration ~= cycles / cardinality
+```
+
+Here `cycles` is the number of angular revolutions represented by one proposed
+orbital cycle, and `cardinality` is the proposed whole-number point count.
+`period_iterations` is the reciprocal frequency and is therefore not itself
+the cardinality when more than one revolution occurs per orbital cycle. The
+`rational_error` and `rational_confidence` fields describe the fit to the
+measured frequency; they are screening signals, not proof of an orbit.
+
+## Exact-period validation
+
+Spectral decomposition can only suggest a cardinality because finite windows,
+sampling stride, leakage, and noise can produce convincing rational ratios.
+Exact-period validation must independently test each proposed pair `(cycles,
+cardinality)` against the iteration map. Starting from the candidate orbital
+state, the validator should:
+
+1. Iterate the map for exactly `cardinality` steps and measure the residual
+   between the final state and the starting state.
+2. Confirm that the angular progression accounts for `cycles` complete turns
+   within the same tolerance.
+3. Test every proper divisor of `cardinality` so a smaller repeating orbit is
+   not mislabeled as a larger one.
+4. Reject escaped or numerically unstable candidates and repeat the test with
+   adaptive `BigComplex` precision when the residual approaches the current
+   numeric tolerance.
+
+Only a candidate that returns after the proposed cardinality, does not return
+earlier, and remains stable under increased precision should be promoted to a
+discovered orbital.

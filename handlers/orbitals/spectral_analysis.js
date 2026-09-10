@@ -75,21 +75,23 @@ const dft_power = (samples, bin) => {
  * @param {number} frequency Cycles per iteration in [0, 1).
  * @param {number} max_period Largest candidate denominator.
  * @param {number} resolution Frequency resolution of the sample window.
- * @returns {Array<{period: number, numerator: number, error: number, confidence: number}>}
- *   Ranked candidate periods.
+ * @returns {Array<{period: number, cardinality: number, cycles: number, error: number, confidence: number}>}
+ *   Ranked rational frequency candidates. `cardinality` is the denominator
+ *   and `cycles` is the reduced cycle count.
  */
 const rational_candidates = (frequency, max_period, resolution) => {
   const candidates = [];
   for (let denominator = 2; denominator <= max_period; denominator += 1) {
-    const numerator = Math.round(frequency * denominator);
-    const error = Math.abs(frequency - numerator / denominator);
-    if (numerator === 0 || numerator >= denominator) continue;
-    const divisor = greatest_common_divisor(numerator, denominator);
-    const reduced_numerator = numerator / divisor;
+    const cycles = Math.round(frequency * denominator);
+    const error = Math.abs(frequency - cycles / denominator);
+    if (cycles === 0 || cycles >= denominator) continue;
+    const divisor = greatest_common_divisor(cycles, denominator);
+    const reduced_cycles = cycles / divisor;
     const reduced_period = denominator / divisor;
     candidates.push({
       period: reduced_period,
-      numerator: reduced_numerator,
+      cardinality: reduced_period,
+      cycles: reduced_cycles,
       error,
       confidence: 1 / (1 + error / Math.max(resolution, 1e-12)),
     });
@@ -173,12 +175,21 @@ export const analyze_polar_spectrum = (
     .map((peak) => {
       const frequency_per_sample = peak.bin / analysis_samples.length;
       const frequency_per_iteration = frequency_per_sample / sample_stride;
+      const rational_candidate = rational_candidates(
+        frequency_per_iteration,
+        DEFAULT_MAX_CANDIDATE_PERIOD,
+        1 / Math.max(analysis_samples.length * sample_stride, 1),
+      )[0];
       return {
         ...peak,
         frequency_cycles_per_sample: frequency_per_sample,
         frequency_cycles_per_iteration: frequency_per_iteration,
         period_iterations:
           frequency_per_iteration > 0 ? 1 / frequency_per_iteration : null,
+        cycles: rational_candidate?.cycles || null,
+        cardinality: rational_candidate?.cardinality || null,
+        rational_error: rational_candidate?.error ?? null,
+        rational_confidence: rational_candidate?.confidence ?? null,
         trustworthy:
           frequency_per_iteration > 0 &&
           1 / frequency_per_iteration <= maximum_trustworthy_cardinality,
